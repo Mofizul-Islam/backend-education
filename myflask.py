@@ -27,7 +27,8 @@ from myutils import (
     response,
     download_from_cloud
 )
-from ocr import extract_text_from_docx, Extract_pdf
+from ocr import extract_text_from_pdf, get_docx_text
+# from ocr import extract_text_from_docx, Extract_pdf
 # from workhorse import test5, delete_record
 # from externals import fill_docx_template
 
@@ -35,6 +36,55 @@ from ocr import extract_text_from_docx, Extract_pdf
 ALLOWED_EXTENSIONS = {"pdf", "docx", "jpeg", "jpg"}
 app = Flask(__name__)
 CORS(app)
+
+
+@app.route("/start-test/<doc_id>", methods=['GET'])
+def start_test(doc_id):
+
+    print("Doc ID", doc_id)
+    fields = [
+        "doc_id",
+        "doc_name",
+        "user_id",
+        "size",
+        "doc_type",
+        "status",
+        "subject",
+        "grade",
+        "timestamp",
+        "cloud_url"
+    ]
+
+    # SQL Injection
+    query = f"""SELECT {", ".join(fields)} FROM public.user_doc WHERE doc_id={doc_id}"""
+    result = run_select(query, ())
+
+    if not result:
+        return {
+            'error': "Invalid doc_id"
+        }, 404
+
+    doc_row = result[0]
+    print("DB Row Fetched", doc_row)
+
+    doc = make_dict(fields, doc_row)
+
+    print("Doc", doc)
+
+    filename = doc.get('doc_name')
+    local_path = get_file_path(filename)
+
+    text = None
+    doc_type = doc.get('doc_type')
+
+    if doc_type == "application/pdf":
+        text = extract_text_from_pdf(local_path)
+
+    elif doc_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        text = get_docx_text(local_path)
+
+    return text
+
 
 
 @app.route("/docs", methods=["GET"])
@@ -181,6 +231,9 @@ UPLOAD_FOLDER = 'local_uploads'
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'jpeg', 'jpg'}
 
 
+def get_file_path(filename):
+    return os.path.join(UPLOAD_FOLDER, filename)
+
 @app.route("/doc-upload", methods=["POST"])
 def doc_upload():
     try:
@@ -212,7 +265,7 @@ def doc_upload():
             os.makedirs(UPLOAD_FOLDER)
 
         # Save file locally
-        local_path = os.path.join(UPLOAD_FOLDER, filename)
+        local_path = get_file_path(filename)
         file.save(local_path)
 
         user_id = request.args.get("user_id")
@@ -254,8 +307,18 @@ def makeres(status, message, status_code):
     return make_response({"status": status, "message": message}, status_code)
 
 
-@app.route("/doc/text-extract", methods=["GET"])
-def text_extract():
+# @app.route("/doc/text-extract", methods=["GET"])
+# def text_extract():
+#     try:
+#         doc_id = request.args.get("doc_id")
+#         return text_extract_helper(doc_id)
+#     except Exception as e:
+#         return makeres("error", str(e), 503)
+
+@app.route('/doc/text-extract', methods=['GET'])
+def extract_text():
+    doc_id = request.args.get('doc_id')
+
     try:
         doc_id = request.args.get("doc_id")
         return text_extract_helper(doc_id)

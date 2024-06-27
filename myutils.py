@@ -54,7 +54,7 @@ def unique_list_keeping_order(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 
-def make_dict(fields, data):
+def make_dict(fields: list | tuple, data: list | tuple):
     '''
     fields are present in data list in the same order
     '''

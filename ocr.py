@@ -3,6 +3,7 @@ import re
 import subprocess
 #from pdf2image import convert_from_path
 import tempfile
+import fitz  # PyMuPDF
 
 
 def separate_cells(cell_texts):
@@ -36,15 +37,28 @@ def extract_text_from_docx(filename):
     )
 
 
-def Extract_pdf(file_name):
-    dd_data = ""
-    images = convert_from_path(file_name)
-    for _, image in enumerate(images):
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
-            image_path = temp_file.name
-            image.save(image_path, "JPEG")
-            # data = your_funtion (image)
-            pass
+# def Extract_pdf(file_name):
+#     dd_data = ""
+#     images = convert_from_path(file_name)
+#     for _, image in enumerate(images):
+#         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
+#             image_path = temp_file.name
+#             image.save(image_path, "JPEG")
+#             # data = your_funtion (image)
+#             pass
+
+
+def extract_text_from_pdf(pdf_path):
+    # Open the PDF file
+    document = fitz.open(pdf_path)
+    text = ""
+
+    # Iterate over each page
+    for page_num in range(len(document)):
+        page = document.load_page(page_num)  # Load page
+        text += page.get_text()  # Extract text from page
+
+    return text
 
 def get_docx_text(filename):
     doc = Document(filename)
