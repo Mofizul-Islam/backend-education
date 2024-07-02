@@ -1,6 +1,8 @@
 import json
 import os
-
+# import services.mcq_generator
+# services.mcq_generator.generate_mcqs()
+from services.mcq_generator import generate_mcqs
 import bleach
 from flask import request, make_response
 from flask import Flask, request, jsonify, send_file
@@ -40,8 +42,16 @@ CORS(app)
 
 @app.route("/start-test/<doc_id>", methods=['GET'])
 def start_test(doc_id):
+    """
+        1. Find Doc with doc_id in the DB (table name: user_doc), raise error if there are none.
+        2. Query questions Table where doc_id matches the doc_id sent in the API as parameter. 
+            Raise error if any question is found as it means questions have already been generated for this doc.
+        3. Get file from storage path from the fetched doc from DB.
+        4. Extract Text from file.
+        5. Call LLM API to generate MCQs from text content.
+        6. Stored the fetched MCQs in the DB in relation questions
+    """
 
-    print("Doc ID", doc_id)
     fields = [
         "doc_id",
         "doc_name",
@@ -82,6 +92,17 @@ def start_test(doc_id):
 
     elif doc_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         text = get_docx_text(local_path)
+
+    # Call MCQ-Generator API
+    res = generate_mcqs(text)
+
+    query = """INSERT INTO public.questions(doc_id, question, options, explanation, ref)
+                   VALUES(%s, %s, %s, %s, %s) RETURNING id"""
+
+    for mcq in res["questions"]:
+        _res = run_select(query, (doc_id, mcq['question'], json.dumps(mcq['options']),
+                                  mcq['explanation'], mcq['ref']))
+        print("RES", _res)
 
     return text
 
