@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from uuid import uuid1
 import logging
 from aihelper import get_file_name_with_id, get_resume_categories
-from mydb import run_select, update_table_fields
+from mydb import exec_query, run_select, update_table_fields
 from myutils import (
     DB_SCHEMA,
     fetch_emails_and_categorize,
@@ -44,12 +44,12 @@ CORS(app)
 def start_test(doc_id):
     """
         1. Find Doc with doc_id in the DB (table name: user_doc), raise error if there are none.
-        2. Query questions Table where doc_id matches the doc_id sent in the API as parameter. 
-            Raise error if any question is found as it means questions have already been generated for this doc.
-        3. Get file from storage path from the fetched doc from DB.
-        4. Extract Text from file.
-        5. Call LLM API to generate MCQs from text content.
-        6. Stored the fetched MCQs in the DB in relation questions
+        2. Get file from storage path from the fetched doc from DB.
+        3. Extract Text from file.
+        4. Call LLM API to generate MCQs from text content.
+        5. Stored the fetched MCQs in the DB in relation questions.
+        6. Update the doc row in user_doc to update a 'test_generated' flag to true
+        Update Statement Format => UPDATE TABLE user_doc SET test_generated = true WHERE doc_id = {doc_id}
     """
 
     fields = [
@@ -104,9 +104,37 @@ def start_test(doc_id):
                                   mcq['explanation'], mcq['ref']))
         print("RES", _res)
 
+    query1 = f"""UPDATE user_doc SET test_generated = true WHERE doc_id = {doc_id}"""
+    result = exec_query(query1)
+    print(result)
+
     return text
 
 
+@app.route("/question-list/<doc_id>", methods=["GET"])
+def question_list(doc_id):
+
+    # doc_id = request.args.get("doc_id")
+    fields = [
+        "id",
+        "doc_id",
+        "question",
+        "options",
+        "explanation",
+        "ref"
+
+    ]
+    s_fields = ",".join(fields)
+    # query = f"""select doc_id,questions,options,explanation,ref from public.questions"""
+    query = f"""select {s_fields} from public.questions where doc_id={doc_id}"""
+    result = run_select(query)
+    print(result)
+    fields2 = [fields_as(field) for field in fields]
+    print(fields2)
+    d = [make_dict(fields2, row) for row in result]
+    print(d)
+
+    return json.dumps({"questions": d})  # json.dumps(d
 
 @app.route("/docs", methods=["GET"])
 def doc_list():
@@ -123,6 +151,7 @@ def doc_list():
         "status",
         "subject",
         "grade",
+        "test_generated",
         "TO_CHAR(timestamp, 'YYYY-MM-DD') as date",
         "cloud_url"
     ]

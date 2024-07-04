@@ -22,6 +22,18 @@ def run_select(query, parameters=None):
     conn.close
     return rows
 
+
+def exec_query(query, parameters=None, return_res=False):
+    conn = get_db_connection()
+    cursr = conn.cursor()
+    cursr.execute(query, parameters)
+    rows = None
+    if return_res:
+        rows = cursr.fetchall()
+    cursr.close()
+    conn.close
+    return rows
+
 # idu stands for insert/delete/update
 def run_idu(query, parameters=None):
     conn = get_db_connection()
