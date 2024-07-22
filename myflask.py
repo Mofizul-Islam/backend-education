@@ -1,9 +1,12 @@
+import asyncio
 import json
 import os
+import bcrypt
 # import services.mcq_generator
 # services.mcq_generator.generate_mcqs()
-from services.mcq_generator import generate_mcqs
+from services.mcq_generator import generate_mcqs, generate_questions, MCQ
 import bleach
+from datetime import date
 from flask import request, make_response
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS, cross_origin
@@ -11,6 +14,7 @@ from markdown import markdown
 from werkzeug.utils import secure_filename
 from uuid import uuid1
 import logging
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from aihelper import get_file_name_with_id, get_resume_categories
 from mydb import exec_query, run_select, update_table_fields
 from myutils import (
@@ -37,6 +41,9 @@ from ocr import extract_text_from_pdf, get_docx_text
 # from myutils import logger
 ALLOWED_EXTENSIONS = {"pdf", "docx", "jpeg", "jpg"}
 app = Flask(__name__)
+
+app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this!
+jwt = JWTManager(app)
 CORS(app)
 
 
@@ -51,6 +58,14 @@ def start_test(doc_id):
         6. Update the doc row in user_doc to update a 'test_generated' flag to true
         Update Statement Format => UPDATE TABLE user_doc SET test_generated = true WHERE doc_id = {doc_id}
     """
+
+    today_date = date.today()
+    test_name = request.args.get("test_name")
+    mcq_count = request.args.get("mcq_count")
+    shortques_count = request.args.get("shortques_count")
+    longques_count = request.args.get("longques_count")
+    if not test_name:
+        return makeres("error", "test_name is not present", 400)
 
     fields = [
         "doc_id",
@@ -75,11 +90,11 @@ def start_test(doc_id):
         }, 404
 
     doc_row = result[0]
-    print("DB Row Fetched", doc_row)
+    # print("DB Row Fetched", doc_row)
 
     doc = make_dict(fields, doc_row)
 
-    print("Doc", doc)
+    # print("Doc", doc)
 
     filename = doc.get('doc_name')
     local_path = get_file_path(filename)
@@ -94,39 +109,110 @@ def start_test(doc_id):
         text = get_docx_text(local_path)
 
     # Call MCQ-Generator API
-    res = generate_mcqs(text)
+    res = asyncio.run(generate_questions(text, {
+        'long_question': longques_count,
+        'short_question': shortques_count,
+        'mcq': mcq_count
+    }))
 
-    query = """INSERT INTO public.questions(doc_id, question, options, explanation, ref)
-                   VALUES(%s, %s, %s, %s, %s) RETURNING id"""
+    query = """INSERT INTO public.question_test(generated_date, type, test, doc_id)
+                 VALUES(%s, %s, %s, %s) RETURNING id"""
 
-    for mcq in res["questions"]:
-        _res = run_select(query, (doc_id, mcq['question'], json.dumps(mcq['options']),
-                                  mcq['explanation'], mcq['ref']))
-        print("RES", _res)
+    test_res = exec_query(
+        query, (
+            today_date.strftime("%Y-%m-%d"),
+            "pdf",
+            test_name,
+            doc_id
+        ),
+        True
+    )
 
-    query1 = f"""UPDATE user_doc SET test_generated = true WHERE doc_id = {doc_id}"""
-    result = exec_query(query1)
-    print(result)
+    if not test_res:
+        return makeres("error", "could not create test", 500)
 
-    return text
+    test_id = test_res[0][0]
+
+    query = """INSERT INTO public.questions(doc_id, question, answer, options, explanation, ref, type, test_id)
+                   VALUES(%s, %s, %s, %s, %s, %s, %s,%s) RETURNING id"""
+
+    print(res)
+    res_dict_arr = []
+    for question in res:
+        res_dict_arr.append(question.model_dump())
+        exec_query(
+            query, (
+                doc_id,
+                question.question,
+                question.answer,
+                json.dumps(question.options) if isinstance(
+                    question, MCQ) else None,
+                question.explanation,
+                question.ref,
+                question.type,
+                test_id,
+            )
+        )
+
+    # query1 = f"""UPDATE user_doc SET test_generated = true WHERE doc_id = {doc_id}"""
+    # result = exec_query(query1)
+    # print(result)
+
+    return jsonify({
+        'status': 'success',
+        'test_id': test_id,
+        "questions": res_dict_arr
+    }), 201
 
 
-@app.route("/question-list/<doc_id>", methods=["GET"])
-def question_list(doc_id):
+@app.route("/question-test/<doc_id>", methods=["GET"])
+@app.route("/question-test", methods=["GET"])
+def question_test(doc_id=None):
+
+    fields = [
+        "id",
+        "TO_CHAR(generated_date, 'YYYY-MM-DD') as generated_date",
+        "type",
+        "test",
+        "question_test.doc_id as doc_id",
+        "grade",
+        "subject"
+    ]
+
+    t_fields = ','.join(fields)
+    query = f"""select {t_fields} from public.question_test INNER JOIN user_doc ON question_test.doc_id= user_doc.doc_id"""
+    if doc_id:
+        query += f" where question_test.doc_id={doc_id}"
+
+    print(query)
+    t_result = run_select(query)
+    print(t_result)
+    fields3 = [fields_as(field) for field in fields]
+    print(fields3)
+    t = [make_dict(fields3, row) for row in t_result]
+    print(t)
+
+    return jsonify({"test_questions": t})
+
+
+@app.route("/question-list/<test_id>", methods=["GET"])
+def question_list(test_id):
 
     # doc_id = request.args.get("doc_id")
     fields = [
         "id",
         "doc_id",
+        "type",
         "question",
+        "answer",
         "options",
         "explanation",
         "ref"
 
     ]
     s_fields = ",".join(fields)
-    # query = f"""select doc_id,questions,options,explanation,ref from public.questions"""
-    query = f"""select {s_fields} from public.questions where doc_id={doc_id}"""
+    # query = f"""select doc_id, type,questions, answer,options,explanation,ref from public.questions"""
+    query = f"""select {s_fields} from public.questions where test_id={test_id}"""
     result = run_select(query)
     print(result)
     fields2 = [fields_as(field) for field in fields]
@@ -609,6 +695,105 @@ def download(report_name):
 #         return makeres("success", "deleted successfully", 200)
 #     except Exception as e:
 #         return makeres("error", str(e), 500)
+
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return makeres("error", "All fields are required", 400)
+
+        hashed_password = bcrypt.hashpw(
+            password.encode('utf-8'), bcrypt.gensalt())
+
+        query = """INSERT INTO users (email, password) VALUES (%s, %s) RETURNING email"""
+        result = exec_query(
+            query, (email, hashed_password.decode('utf-8')), True)
+        if not result:
+            return makeres("error", "Invalid email or password", 401)
+
+        return makeres("success", "User created successfully", 201)
+    except Exception as e:
+        logging.error(e)
+        print("error", e)
+        return makeres("error", str(e), 500)
+
+
+@app.route('/signin', methods=['POST'])
+def signin():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return make_response({"error": "All fields are required"}, 400)
+
+        query = """SELECT id, password FROM users WHERE email = %s"""
+        result = run_select(query, (email,))
+        # [
+        #     [1, 'hashedPassword'],
+        #     [],
+        #     []
+        # ]
+
+        if not result:
+            return make_response({"error": "Invalid email or password"}, 401)
+
+        user_id, hashed_password = result[0]
+        # user_id = result[0][0]
+        # hashed_password = result[0][1]
+
+        if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+            access_token = create_access_token(
+                identity={'user_id': user_id, 'email': email})
+            return make_response({"access_token": access_token, "status":"success"}, 200)
+
+        return make_response({"error": "Invalid email or password"}, 401)
+    except Exception as e:
+        return make_response({"error": str(e)}, 500)
+
+
+@app.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return make_response({"message": f"Hello, {current_user}!"}, 200)
+
+
+@app.route('/user-profile', methods=['Post'])
+@jwt_required()
+def user_profile():
+    current_user = get_jwt_identity()
+    user_id = current_user['user_id']
+
+    query = """SELECT user_id FROM public.user_profile WHERE user_id=%s """
+    result = run_select(query, (user_id))
+    data = request.get_json()
+
+    if len(result)==0:
+        # TODO: insert row into user_profile for this user_id 
+       query = """INSERT INTO public.user_profile(user_id, first_name, last_name, cell_number, address, city, country, zip_code, qualification, subject, grade, school_name, school_code, experience)
+                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s) RETURNING user_id"""
+       result = run_select(query, (user_id, data.get("first_name"), data.get("last_name"), 
+                                   data.get("cell_number"), data.get("address"), data.get("city"), data.get("country"), data.get("qualification"), data.get("subject"), data.get("zip_code"), data.get("grade"), data.get("school_name"), data.get("school_code"), data.get("experience")))
+       if not result:
+           return make_response({"message":"Make sure all required fields are provided"}, 400)
+        
+    else:
+        #TODO: update the existing row
+        query1 = f"""UPDATE user_profile SET first_name={data.get("first_name")},  = true WHERE user_id = {doc_id}"""
+        pass
+
+    
+    return make_response({"message": f"Hello, {current_user}!"}, 200)
+
+
+
 
 
 if __name__ == "__main__":
