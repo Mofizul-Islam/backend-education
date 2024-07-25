@@ -439,8 +439,8 @@ def doc_upload():
         return makeres("error", str(e), 503)
 
 
-def makeres(status, message, status_code):
-    return make_response({"status": status, "message": message}, status_code)
+# def makeres(status, message, status_code):
+#     return make_response({"status": status, "message": message}, status_code)
 
 
 # @app.route("/doc/text-extract", methods=["GET"])
@@ -451,15 +451,15 @@ def makeres(status, message, status_code):
 #     except Exception as e:
 #         return makeres("error", str(e), 503)
 
-@app.route('/doc/text-extract', methods=['GET'])
-def extract_text():
-    doc_id = request.args.get('doc_id')
+# @app.route('/doc/text-extract', methods=['GET'])
+# def extract_text():
+#     doc_id = request.args.get('doc_id')
 
-    try:
-        doc_id = request.args.get("doc_id")
-        return text_extract_helper(doc_id)
-    except Exception as e:
-        return makeres("error", str(e), 503)
+#     try:
+#         doc_id = request.args.get("doc_id")
+#         return text_extract_helper(doc_id)
+#     except Exception as e:
+#         return makeres("error", str(e), 503)
 
 
 def update_text(fname, docid, doctype):
@@ -477,26 +477,26 @@ def update_text(fname, docid, doctype):
 """Separate the sections in the text """
 
 
-@app.route("/ocr", methods=["POST"])
-def upload_file():
-    if "file" not in request.files:
-        return jsonify(error="No file part in the request"), 400
+# @app.route("/ocr", methods=["POST"])
+# def upload_file():
+#     if "file" not in request.files:
+#         return jsonify(error="No file part in the request"), 400
 
-    file = request.files["file"]
+#     file = request.files["file"]
 
-    if file.filename == "":
-        return jsonify(error="No selected file"), 400
+#     if file.filename == "":
+#         return jsonify(error="No selected file"), 400
 
-    filename = secure_filename(file.filename)
-    file_extension = os.path.splitext(filename)[1]
-    if file_extension == ".docx":
-        separated_english_texts = extract_text_from_docx(file)
-        return jsonify(data=separated_english_texts)
+#     filename = secure_filename(file.filename)
+#     file_extension = os.path.splitext(filename)[1]
+#     if file_extension == ".docx":
+#         separated_english_texts = extract_text_from_docx(file)
+#         return jsonify(data=separated_english_texts)
 
-    elif file_extension == ".pdf":
-        Extract_pdf(file)
+#     elif file_extension == ".pdf":
+#         Extract_pdf(file)
 
-    return jsonify(extension=file_extension), 200
+#     return jsonify(extension=file_extension), 200
 
 
 # new function to save edited text
@@ -751,7 +751,7 @@ def signin():
         if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
             access_token = create_access_token(
                 identity={'user_id': user_id, 'email': email})
-            return make_response({"access_token": access_token, "status":"success"}, 200)
+            return make_response({"access_token": access_token, "status":"success", "user":{"email":email}}, 200)
 
         return make_response({"error": "Invalid email or password"}, 401)
     except Exception as e:
@@ -765,34 +765,109 @@ def protected():
     return make_response({"message": f"Hello, {current_user}!"}, 200)
 
 
+@app.route('/user-profile', methods=["GET"])
+@jwt_required()
+def get_user_profile():
+    current_user = get_jwt_identity()
+    user_id = current_user['user_id']
+    print("user-id response", user_id)
+
+    fields = [
+        "user_id",
+        "first_name",
+        "last_name",
+        "cell_number",
+        "address",
+        "city",
+        "country",
+        "zip_code",
+        "qualification",
+        "subject",
+        "grade",
+        "school_name",
+        "school_code",
+        "experience"
+
+    ]
+
+    s_fields = ",".join(fields)
+    query = f"""SELECT {s_fields} FROM public.user_profile WHERE user_id={user_id} """
+    result = run_select(query, (user_id,))
+    fields2 = [fields_as(field) for field in fields]
+    user_profile_dict = make_dict(fields2, result[0]) if result else {}
+    return user_profile_dict
+
+
 @app.route('/user-profile', methods=['Post'])
 @jwt_required()
 def user_profile():
     current_user = get_jwt_identity()
     user_id = current_user['user_id']
+    print("user-id response", user_id)
 
-    query = """SELECT user_id FROM public.user_profile WHERE user_id=%s """
-    result = run_select(query, (user_id))
+    fields = [
+        "user_id",
+        "first_name",
+        "last_name",
+        "cell_number",
+        "address",
+        "city",
+        "country",
+        "zip_code",
+        "qualification",
+        "subject",
+        "grade",
+        "school_name",
+        "school_code",
+        "experience"
+
+    ]
+
+    s_fields = ",".join(fields)
+    query = f"""SELECT {s_fields} FROM public.user_profile WHERE user_id={user_id} """
+    result = run_select(query, (user_id,))
+    fields2 = [fields_as(field) for field in fields]
+    user_profile_dict = make_dict(fields2, result[0]) if result else {}
     data = request.get_json()
+    # return user_profile_dict
 
-    if len(result)==0:
-        # TODO: insert row into user_profile for this user_id 
-       query = """INSERT INTO public.user_profile(user_id, first_name, last_name, cell_number, address, city, country, zip_code, qualification, subject, grade, school_name, school_code, experience)
+    if len(result) == 0:
+        query = """INSERT INTO public.user_profile(
+            user_id, first_name, 
+            last_name, cell_number, address, city, 
+            country, zip_code, qualification, subject, 
+            grade, school_name, school_code, experience)
                    VALUES(%s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s) RETURNING user_id"""
-       result = run_select(query, (user_id, data.get("first_name"), data.get("last_name"), 
-                                   data.get("cell_number"), data.get("address"), data.get("city"), data.get("country"), data.get("qualification"), data.get("subject"), data.get("zip_code"), data.get("grade"), data.get("school_name"), data.get("school_code"), data.get("experience")))
-       if not result:
-           return make_response({"message":"Make sure all required fields are provided"}, 400)
+        result = run_select(query, (
+            user_id,
+            data.get("first_name"), data.get("last_name"),
+            data.get("cell_number"), data.get("address"),
+            data.get("city"), data.get("country"),
+            data.get("qualification"), data.get("subject"),
+            data.get("zip_code"), data.get("grade"),
+            data.get("school_name"), data.get("school_code"),
+            data.get("experience")
+        )
+        )
+        if not result:
+            return make_response({"message": "Make sure all required fields are provided"}, 400)
         
     else:
-        #TODO: update the existing row
-        query1 = f"""UPDATE user_profile SET first_name={data.get("first_name")},  = true WHERE user_id = {doc_id}"""
-        pass
+        for col in data:
+            user_profile_dict[col] = data[col]
 
-    
-    return make_response({"message": f"Hello, {current_user}!"}, 200)
+        query1 = """UPDATE user_profile 
+                        SET first_name=%(first_name)s, last_name=%(last_name)s,
+                        cell_number=%(cell_number)s, address=%(address)s, 
+                        city=%(city)s, country=%(country)s, zip_code=%(zip_code)s, 
+                        qualification=%(qualification)s, subject=%(subject)s, grade=%(grade)s, 
+                        school_name=%(school_name)s,school_code=%(school_code)s,
+                        experience=%(experience)s WHERE user_id = %(user_id)s"""
+        print("query", query1)
+        result = exec_query(query1, user_profile_dict)
+        print("result", result)
 
-
+    return make_response({"message": f"Updated user profile"}, 200)
 
 
 
