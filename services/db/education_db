@@ -1,0 +1,352 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 16.2
+-- Dumped by pg_dump version 16.2
+
+-- Started on 2024-07-28 23:17:57
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 225 (class 1259 OID 24726)
+-- Name: question_test; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.question_test (
+    id integer NOT NULL,
+    generated_date date NOT NULL,
+    type text NOT NULL,
+    test text NOT NULL,
+    doc_id bigint NOT NULL
+);
+
+
+ALTER TABLE public.question_test OWNER TO postgres;
+
+--
+-- TOC entry 224 (class 1259 OID 24725)
+-- Name: question_test_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.question_test_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.question_test_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4821 (class 0 OID 0)
+-- Dependencies: 224
+-- Name: question_test_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.question_test_id_seq OWNED BY public.question_test.id;
+
+
+--
+-- TOC entry 221 (class 1259 OID 24612)
+-- Name: questions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.questions (
+    id bigint NOT NULL,
+    question text NOT NULL,
+    options jsonb,
+    explanation text,
+    ref text,
+    doc_id bigint NOT NULL,
+    type text NOT NULL,
+    answer text,
+    test_id bigint NOT NULL
+);
+
+
+ALTER TABLE public.questions OWNER TO postgres;
+
+--
+-- TOC entry 220 (class 1259 OID 24611)
+-- Name: questions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.questions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.questions_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4822 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: questions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.questions_id_seq OWNED BY public.questions.id;
+
+
+--
+-- TOC entry 219 (class 1259 OID 16470)
+-- Name: user_doc; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_doc (
+    doc_id bigint NOT NULL,
+    doc_name text,
+    user_id text,
+    size bigint,
+    doc_type text,
+    cloud_url text,
+    status text,
+    "timestamp" timestamp without time zone DEFAULT CURRENT_DATE,
+    subject text,
+    grade text,
+    test_generated boolean
+);
+
+
+ALTER TABLE public.user_doc OWNER TO postgres;
+
+--
+-- TOC entry 218 (class 1259 OID 16469)
+-- Name: user_doc_doc_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.user_doc_doc_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.user_doc_doc_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4823 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: user_doc_doc_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.user_doc_doc_id_seq OWNED BY public.user_doc.doc_id;
+
+
+--
+-- TOC entry 227 (class 1259 OID 24775)
+-- Name: user_profile; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_profile (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    first_name text,
+    last_name text,
+    cell_number bigint,
+    address text,
+    city text,
+    country text,
+    zip_code bigint,
+    qualification text,
+    grade text,
+    school_name text,
+    school_code bigint,
+    experience bigint,
+    subject text
+);
+
+
+ALTER TABLE public.user_profile OWNER TO postgres;
+
+--
+-- TOC entry 226 (class 1259 OID 24774)
+-- Name: user_profile_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.user_profile_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.user_profile_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4824 (class 0 OID 0)
+-- Dependencies: 226
+-- Name: user_profile_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.user_profile_id_seq OWNED BY public.user_profile.id;
+
+
+--
+-- TOC entry 222 (class 1259 OID 24704)
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    email text NOT NULL,
+    password text,
+    id bigint NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
+-- TOC entry 223 (class 1259 OID 24714)
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.users_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4825 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- TOC entry 4658 (class 2604 OID 24729)
+-- Name: question_test id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.question_test ALTER COLUMN id SET DEFAULT nextval('public.question_test_id_seq'::regclass);
+
+
+--
+-- TOC entry 4656 (class 2604 OID 24615)
+-- Name: questions id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.questions ALTER COLUMN id SET DEFAULT nextval('public.questions_id_seq'::regclass);
+
+
+--
+-- TOC entry 4654 (class 2604 OID 16473)
+-- Name: user_doc doc_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_doc ALTER COLUMN doc_id SET DEFAULT nextval('public.user_doc_doc_id_seq'::regclass);
+
+
+--
+-- TOC entry 4659 (class 2604 OID 24778)
+-- Name: user_profile id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_profile ALTER COLUMN id SET DEFAULT nextval('public.user_profile_id_seq'::regclass);
+
+
+--
+-- TOC entry 4657 (class 2604 OID 24715)
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- TOC entry 4665 (class 2606 OID 24724)
+-- Name: users email_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT email_unique UNIQUE (email);
+
+
+--
+-- TOC entry 4669 (class 2606 OID 24733)
+-- Name: question_test question_test_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.question_test
+    ADD CONSTRAINT question_test_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4663 (class 2606 OID 24619)
+-- Name: questions questions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.questions
+    ADD CONSTRAINT questions_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4661 (class 2606 OID 16477)
+-- Name: user_doc user_doc_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_doc
+    ADD CONSTRAINT user_doc_pkey PRIMARY KEY (doc_id);
+
+
+--
+-- TOC entry 4671 (class 2606 OID 24782)
+-- Name: user_profile user_profile_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_profile
+    ADD CONSTRAINT user_profile_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4667 (class 2606 OID 24722)
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4672 (class 2606 OID 24620)
+-- Name: questions doc_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.questions
+    ADD CONSTRAINT doc_id FOREIGN KEY (doc_id) REFERENCES public.user_doc(doc_id);
+
+
+-- Completed on 2024-07-28 23:17:58
+
+--
+-- PostgreSQL database dump complete
+--
+
