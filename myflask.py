@@ -18,8 +18,8 @@ import logging
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 # from aihelper import get_file_name_with_id, get_resume_categories
 from mydb import exec_query, run_select, update_table_fields
-from flask_mysqldb import MySQL
-import MySQLdb.cursors
+# from flask_mysqldb import MySQL
+# import MySQLdb.cursors
 from myutils import (
     DB_SCHEMA,
     PORT,
