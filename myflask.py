@@ -618,29 +618,29 @@ def fill_and_download():
         return makeres("error", str(e), 500)
 
 
-@app.route("/search", methods=["POST"])
-def doc_search():
-    try:
-        req = request.get_json()
-        doc_type = req['doc_type']
-        if doc_type.strip() is None:
-            return response("error", "doctype should not be None", [], 400)
-        elif doc_type == "Resume":
-            resp = get_file_name_with_id(
-                req["message"], RESUME_ASSISTANCE_ID, doc_type)
-        elif doc_type == "Lease-Agreement":
-            resp = get_file_name_with_id(
-                req["message"], LEASE_ASSISTANCE_ID, doc_type)
-        elif doc_type == "Email":
-            resp = get_file_name_with_id(
-                req["message"], EMAIL_ASSISTANCE_ID, doc_type)
-        else:
-            return response("error", "Invalid doctype", [], 400)
-        if resp is None or isinstance(resp, dict):
-            return response("success", "Records are not found", [], 200)
-        return response("success", "Data fetch  successfully", resp, 200)
-    except Exception as e:
-        return response("error", str(e), [], 500)
+# @app.route("/search", methods=["POST"])
+# def doc_search():
+#     try:
+#         req = request.get_json()
+#         doc_type = req['doc_type']
+#         if doc_type.strip() is None:
+#             return response("error", "doctype should not be None", [], 400)
+#         elif doc_type == "Resume":
+#             resp = get_file_name_with_id(
+#                 req["message"], RESUME_ASSISTANCE_ID, doc_type)
+#         elif doc_type == "Lease-Agreement":
+#             resp = get_file_name_with_id(
+#                 req["message"], LEASE_ASSISTANCE_ID, doc_type)
+#         elif doc_type == "Email":
+#             resp = get_file_name_with_id(
+#                 req["message"], EMAIL_ASSISTANCE_ID, doc_type)
+#         else:
+#             return response("error", "Invalid doctype", [], 400)
+#         if resp is None or isinstance(resp, dict):
+#             return response("success", "Records are not found", [], 200)
+#         return response("success", "Data fetch  successfully", resp, 200)
+#     except Exception as e:
+#         return response("error", str(e), [], 500)
 
 
 @app.route("/email/email-download", methods=["GET"])
