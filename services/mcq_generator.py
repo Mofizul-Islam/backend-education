@@ -3,7 +3,9 @@ import asyncio
 from pydantic import BaseModel
 import aiohttp
 
-BASE_URL = "http://127.0.0.1:8000"
+from myutils import LLM_API_BASE_URL
+
+BASE_URL = LLM_API_BASE_URL or "http://127.0.0.1:8000"
 
 
 class Question(BaseModel):

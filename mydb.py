@@ -2,9 +2,12 @@ import psycopg2
 import json
 from myutils import DB_NAME, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_SCHEMA
 import json
+import logging
 
 def get_db_connection():
-    conn = psycopg2.connect(dbname = DB_NAME,
+    print(f"Connecting DB: {DB_HOST} {DB_NAME} {DB_PORT} {DB_USER}")
+    logging.info(f"Connecting DB: {DB_HOST} {DB_NAME} {DB_PORT} {DB_USER}")
+    conn = psycopg2.connect(dbname=DB_NAME,
                             host = DB_HOST,
                             port = DB_PORT,
                             user = DB_USER,

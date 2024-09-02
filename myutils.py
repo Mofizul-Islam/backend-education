@@ -19,18 +19,19 @@ import requests
 from retrying import retry
 load_dotenv()
 
-DB_NAME = os.environ['DB_NAME']
-DB_HOST = os.environ['DB_HOST']
-DB_PORT = os.environ['DB_PORT']
-DB_USER = os.environ['DB_USER']
-DB_PASSWORD = os.environ['DB_PASSWORD']
+LLM_API_BASE_URL = os.environ.get('LLM_API_BASE_URL')
+DB_NAME = os.environ.get('DB_NAME')
+DB_HOST = os.environ.get('DB_HOST')
+DB_PORT = os.environ.get('DB_PORT')
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
 DB_SCHEMA = 'dcompare'
-RESUME_ASSISTANCE_ID = os.environ['RESUME_ASSISTANCE_ID']
-LEASE_ASSISTANCE_ID = os.environ['LEASE_ASSISTANCE_ID']
-EMAIL_ASSISTANCE_ID = os.environ['EMAIL_ASSISTANCE_ID']
-OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
-EMAIL_ID = os.environ['EMAIL_ID']
-PASSWORD = os.environ['PASSWORD']
+RESUME_ASSISTANCE_ID = os.environ.get('RESUME_ASSISTANCE_ID')
+LEASE_ASSISTANCE_ID = os.environ.get('LEASE_ASSISTANCE_ID')
+EMAIL_ASSISTANCE_ID = os.environ.get('EMAIL_ASSISTANCE_ID')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+EMAIL_ID = os.environ.get('EMAIL_ID')
+PASSWORD = os.environ.get('PASSWORD')
 FILE_TEMPLATE_URL = 'https://crcp.impressicocrm.com/api/api/ResumeParse'
 # FILE_TEMPLATE_URL = 'http://localhost:5243/api/ResumeParse'
 

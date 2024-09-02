@@ -2,3 +2,5 @@ local_uploads
 education_data
 __pycache__
 .env
+.vercel
+*.log

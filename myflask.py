@@ -1,3 +1,4 @@
+
 import asyncio
 import json
 import os
@@ -17,6 +18,8 @@ import logging
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from aihelper import get_file_name_with_id, get_resume_categories
 from mydb import exec_query, run_select, update_table_fields
+from flask_mysqldb import MySQL
+import MySQLdb.cursors
 from myutils import (
     DB_SCHEMA,
     fetch_emails_and_categorize,
@@ -34,6 +37,14 @@ from myutils import (
     download_from_cloud
 )
 from ocr import extract_text_from_pdf, get_docx_text
+import db.mysql
+import logging
+
+logging.basicConfig(filename="logs.log", filemode="w",
+                    format="%(name)s → %(levelname)s: %(message)s")
+
+logging.debug(f"ENVIRON: {str(os.environ)}")
+
 # from ocr import extract_text_from_docx, Extract_pdf
 # from workhorse import test5, delete_record
 # from externals import fill_docx_template
@@ -45,6 +56,7 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this!
 jwt = JWTManager(app)
 CORS(app)
+# db.mysql.init(app)
 
 
 @app.route("/start-test/<doc_id>", methods=['GET'])
@@ -116,7 +128,7 @@ def start_test(doc_id):
     }))
 
     query = """INSERT INTO public.question_test(generated_date, type, test, doc_id)
-                 VALUES(%s, %s, %s, %s) RETURNING id"""
+                VALUES(%s, %s, %s, %s) RETURNING id"""
 
     test_res = exec_query(
         query, (
@@ -134,7 +146,7 @@ def start_test(doc_id):
     test_id = test_res[0][0]
 
     query = """INSERT INTO public.questions(doc_id, question, answer, options, explanation, ref, type, test_id)
-                   VALUES(%s, %s, %s, %s, %s, %s, %s,%s) RETURNING id"""
+                VALUES(%s, %s, %s, %s, %s, %s, %s,%s) RETURNING id"""
 
     print(res)
     res_dict_arr = []
@@ -222,6 +234,7 @@ def question_list(test_id):
 
     return json.dumps({"questions": d})  # json.dumps(d
 
+
 @app.route("/docs", methods=["GET"])
 def doc_list():
     """
@@ -243,7 +256,12 @@ def doc_list():
     ]
     s_fields = ",".join(fields)
     query = f"""select {s_fields} from public.user_doc where doc_type IS NOT NULL ORDER BY doc_id DESC"""
+    logging.debug(f"Get Docs: {user_id} {query}")
+    print(f"Get Docs: {user_id} {query}")
+
     result = run_select(query, (user_id,))
+    # result = db.mysql.fetch_all(query, (user_id,))
+    # d = result
     fields2 = [fields_as(field) for field in fields]
     print(fields2)
     d = [make_dict(fields2, row) for row in result]
@@ -256,6 +274,7 @@ def doc_list():
     doc_type = ['Resume', 'Lease-Agreement']
     print(doc_type)
     return json.dumps({"file_list": d, "doc_type": doc_type})  # json.dumps(d)
+    # return json.dumps({"file_list": d})  # json.dumps(d)
 
 
 def doc_status_helper(doc_id):
@@ -370,6 +389,7 @@ ALLOWED_EXTENSIONS = {'pdf', 'docx', 'jpeg', 'jpg'}
 def get_file_path(filename):
     return os.path.join(UPLOAD_FOLDER, filename)
 
+
 @app.route("/doc-upload", methods=["POST"])
 def doc_upload():
     try:
@@ -423,7 +443,7 @@ def doc_upload():
         # cloud_path = res.get("url", "")
 
         query = """INSERT INTO public.user_doc(doc_name, user_id, size, doc_type, subject, grade, cloud_url, status)
-                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s) RETURNING doc_id"""
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s) RETURNING doc_id"""
         result = run_select(query, (filename, user_id, sz,
                             doc_type, subject, grade, 'cloud_path', "uploaded"))
 
@@ -751,7 +771,7 @@ def signin():
         if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
             access_token = create_access_token(
                 identity={'user_id': user_id, 'email': email})
-            return make_response({"access_token": access_token, "status":"success", "user":{"email":email}}, 200)
+            return make_response({"access_token": access_token, "status": "success", "user": {"email": email}}, 200)
 
         return make_response({"error": "Invalid email or password"}, 401)
     except Exception as e:
@@ -837,7 +857,7 @@ def user_profile():
             last_name, cell_number, address, city, 
             country, zip_code, qualification, subject, 
             grade, school_name, school_code, experience)
-                   VALUES(%s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s) RETURNING user_id"""
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s) RETURNING user_id"""
         result = run_select(query, (
             user_id,
             data.get("first_name"), data.get("last_name"),
@@ -851,7 +871,7 @@ def user_profile():
         )
         if not result:
             return make_response({"message": "Make sure all required fields are provided"}, 400)
-        
+
     else:
         for col in data:
             user_profile_dict[col] = data[col]
@@ -870,6 +890,10 @@ def user_profile():
     return make_response({"message": f"Updated user profile"}, 200)
 
 
+@app.route("/hello", methods=['GET'])
+def hello():
+    return make_response({"message": "Hello there"})
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True)
