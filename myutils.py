@@ -411,7 +411,7 @@ def fetch_emails_and_categorize():
     import email
     from email.header import decode_header
     from mydb import run_select, run_idu
-    from aihelper import get_resume_categories
+    # from aihelper import get_resume_categories
 
     # Login to IMAP server
     # Change this to your IMAP server
