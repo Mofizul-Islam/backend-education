@@ -20,6 +20,7 @@ from retrying import retry
 load_dotenv()
 
 LLM_API_BASE_URL = os.environ.get('LLM_API_BASE_URL')
+PORT = os.environ.get('PORT')
 DB_NAME = os.environ.get('DB_NAME')
 DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
